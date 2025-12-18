@@ -6,6 +6,7 @@ import '../../../../core/config/app_config.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';
 import '../../../../features/contacts/presentation/screens/contacts_screen.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../voice/presentation/widgets/voice_record_button.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -75,12 +76,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     });
   }
 
-  void _onRecordPressed() {
-    // Open Global Voice Recording Modal
-    // This will be implemented later
-    print("Record Pressed");
-  }
-
   @override
   Widget build(BuildContext context) {
     // Show loading while checking profile
@@ -114,7 +109,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           // Main Content
           IndexedStack(index: _currentIndex, children: _screens),
 
-          // Custom Bottom Bar
+          // Custom Bottom Bar with Voice Recording
           Positioned(
             bottom: 0,
             left: 0,
@@ -131,69 +126,78 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
-                    Colors.black.withOpacity(0.9),
+                    Colors.black.withOpacity(0.95),
+                    Colors.black.withOpacity(0.8),
                     Colors.black.withOpacity(0.0),
                   ],
+                  stops: const [0.0, 0.5, 1.0],
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Chat / Home Icon
-                  IconButton(
-                    icon: Icon(
-                      Icons.chat_bubble_rounded,
-                      color: _currentIndex == 0
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                      size: 28,
-                    ),
-                    onPressed: () => _onTabTapped(0),
-                  ),
-
-                  // Record Button (Big)
-                  GestureDetector(
-                    onTap: _onRecordPressed,
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.textPrimary,
-                          width: 4,
-                        ),
-                        color: Colors.transparent,
+                  // Voice Record Button (centered, with waveform)
+                  const VoiceRecordButton(),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Navigation icons row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      // Chat / Home Icon
+                      _buildNavItem(
+                        icon: Icons.chat_bubble_rounded,
+                        label: 'Chats',
+                        isSelected: _currentIndex == 0,
+                        onTap: () => _onTabTapped(0),
                       ),
-                      child: Container(
-                        margin: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.mic,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                  ),
 
-                  // Contacts Icon
-                  IconButton(
-                    icon: Icon(
-                      Icons.people_alt_rounded,
-                      color: _currentIndex == 1
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                      size: 28,
-                    ),
-                    onPressed: () => _onTabTapped(1),
+                      // Spacer for center button
+                      const SizedBox(width: 72),
+
+                      // Contacts Icon
+                      _buildNavItem(
+                        icon: Icons.people_alt_rounded,
+                        label: 'Contacts',
+                        isSelected: _currentIndex == 1,
+                        onTap: () => _onTabTapped(1),
+                      ),
+                    ],
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+            size: 28,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
         ],
