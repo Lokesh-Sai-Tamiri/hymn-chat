@@ -7,6 +7,7 @@ import '../../../../core/config/app_config.dart';
 class VoiceRecordingState {
   final bool isRecording;
   final bool hasPermission;
+  final bool isPermissionPermanentlyDenied;
   final double currentAmplitude;
   final Duration recordingDuration;
   final String? recordingPath;
@@ -15,6 +16,7 @@ class VoiceRecordingState {
   const VoiceRecordingState({
     this.isRecording = false,
     this.hasPermission = false,
+    this.isPermissionPermanentlyDenied = false,
     this.currentAmplitude = 0.0,
     this.recordingDuration = Duration.zero,
     this.recordingPath,
@@ -24,6 +26,7 @@ class VoiceRecordingState {
   VoiceRecordingState copyWith({
     bool? isRecording,
     bool? hasPermission,
+    bool? isPermissionPermanentlyDenied,
     double? currentAmplitude,
     Duration? recordingDuration,
     String? recordingPath,
@@ -32,6 +35,7 @@ class VoiceRecordingState {
     return VoiceRecordingState(
       isRecording: isRecording ?? this.isRecording,
       hasPermission: hasPermission ?? this.hasPermission,
+      isPermissionPermanentlyDenied: isPermissionPermanentlyDenied ?? this.isPermissionPermanentlyDenied,
       currentAmplitude: currentAmplitude ?? this.currentAmplitude,
       recordingDuration: recordingDuration ?? this.recordingDuration,
       recordingPath: recordingPath,
@@ -77,7 +81,11 @@ class VoiceRecordingNotifier extends Notifier<VoiceRecordingState> {
 
   Future<void> _checkPermission() async {
     final hasPermission = await _service.hasPermission();
-    state = state.copyWith(hasPermission: hasPermission);
+    final isPermanentlyDenied = await _service.isPermissionPermanentlyDenied();
+    state = state.copyWith(
+      hasPermission: hasPermission,
+      isPermissionPermanentlyDenied: isPermanentlyDenied,
+    );
   }
 
   void _listenToAmplitude() {
@@ -90,10 +98,36 @@ class VoiceRecordingNotifier extends Notifier<VoiceRecordingState> {
   }
 
   /// Request microphone permission
+  /// Returns true if granted, false otherwise
+  /// Updates state with permanentlyDenied flag if applicable
   Future<bool> requestPermission() async {
-    final granted = await _service.requestPermission();
-    state = state.copyWith(hasPermission: granted);
-    return granted;
+    final result = await _service.requestPermission();
+    
+    switch (result) {
+      case MicrophonePermissionResult.granted:
+        state = state.copyWith(
+          hasPermission: true,
+          isPermissionPermanentlyDenied: false,
+        );
+        return true;
+      case MicrophonePermissionResult.permanentlyDenied:
+        state = state.copyWith(
+          hasPermission: false,
+          isPermissionPermanentlyDenied: true,
+        );
+        return false;
+      case MicrophonePermissionResult.denied:
+        state = state.copyWith(
+          hasPermission: false,
+          isPermissionPermanentlyDenied: false,
+        );
+        return false;
+    }
+  }
+  
+  /// Open app settings to enable microphone permission
+  Future<bool> openSettings() async {
+    return await _service.openSettings();
   }
 
   /// Start recording
@@ -103,9 +137,7 @@ class VoiceRecordingNotifier extends Notifier<VoiceRecordingState> {
       if (!state.hasPermission) {
         final granted = await requestPermission();
         if (!granted) {
-          state = state.copyWith(
-            errorMessage: 'Microphone permission is required to record voice messages',
-          );
+          // Error message will be shown by UI based on isPermissionPermanentlyDenied flag
           return false;
         }
       }

@@ -5,8 +5,12 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../chat/presentation/screens/chat_list_screen.dart';
 import '../../../../features/contacts/presentation/screens/contacts_screen.dart';
+import '../../../../features/organization/presentation/screens/organization_screen.dart';
+import '../../../../features/ai/presentation/screens/inara_ai_screen.dart';
+import '../../../../features/ai/presentation/widgets/animated_ai_icon.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../voice/presentation/widgets/voice_record_button.dart';
+import '../../../voice/presentation/providers/voice_recording_provider.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -19,11 +23,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
   bool _isCheckingProfile = true;
   bool _hasCheckedProfile = false;
-
-  final List<Widget> _screens = [
-    const ChatListScreen(),
-    const ContactsScreen(),
-  ];
 
   @override
   void initState() {
@@ -59,6 +58,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       setState(() {
         _isCheckingProfile = false;
       });
+      
+      // Request microphone permission immediately after showing home screen
+      _requestMicrophonePermission();
     } catch (e) {
       if (AppConfig.debugMode) {
         print('⚠️ MainScreen: Error checking profile: $e');
@@ -69,15 +71,40 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       }
     }
   }
+  
+  Future<void> _requestMicrophonePermission() async {
+    // Request microphone permission as soon as home screen loads
+    final voiceNotifier = ref.read(voiceRecordingProvider.notifier);
+    final granted = await voiceNotifier.requestPermission();
+    
+    if (AppConfig.debugMode) {
+      print('🎤 Microphone permission on home screen: $granted');
+    }
+  }
+
+  int _previousIndex = 0;
 
   void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    if (_currentIndex != index) {
+      setState(() {
+        _previousIndex = _currentIndex;
+        _currentIndex = index;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Define screens here to ensure hot reload works correctly
+    final List<Widget> screens = [
+      ChatListScreen(),
+      const OrganizationScreen(),
+      const ContactsScreen(),
+      InaraAIScreen(
+        onBackPressed: () => _onTabTapped(_previousIndex),
+      ),
+    ];
+
     // Show loading while checking profile
     if (_isCheckingProfile) {
       return Scaffold(
@@ -107,68 +134,111 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       body: Stack(
         children: [
           // Main Content
-          IndexedStack(index: _currentIndex, children: _screens),
+          IndexedStack(index: _currentIndex, children: screens),
 
-          // Custom Bottom Bar with Voice Recording
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 10,
-                bottom: MediaQuery.of(context).padding.bottom + 10,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.95),
-                    Colors.black.withOpacity(0.8),
-                    Colors.black.withOpacity(0.0),
+          // Custom Bottom Bar (Hidden when on AI Tab)
+          if (_currentIndex != 3)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 10,
+                  bottom: MediaQuery.of(context).padding.bottom + 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.95),
+                      Colors.black.withOpacity(0.8),
+                      Colors.black.withOpacity(0.0),
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Voice Record Button
+                    const VoiceRecordButton(),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Navigation icons row
+                    Row(
+                      children: [
+                        // Left Side (Chats, Org)
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _buildNavItem(
+                                icon: Icons.chat_bubble_rounded,
+                                label: 'Chats',
+                                isSelected: _currentIndex == 0,
+                                onTap: () => _onTabTapped(0),
+                              ),
+                              _buildNavItem(
+                                icon: Icons.business_rounded,
+                                label: 'Organization',
+                                isSelected: _currentIndex == 1,
+                                onTap: () => _onTabTapped(1),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Center Spacer for Record Button
+                        const SizedBox(width: 80),
+
+                        // Right Side (Contacts, AI)
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _buildNavItem(
+                                icon: Icons.people_alt_rounded,
+                                label: 'Contacts',
+                                isSelected: _currentIndex == 2,
+                                onTap: () => _onTabTapped(2),
+                              ),
+                              
+                              // Custom AI Item
+                              GestureDetector(
+                                onTap: () => _onTabTapped(3),
+                                behavior: HitTestBehavior.opaque,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AnimatedAIIcon(isSelected: _currentIndex == 3),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Inara AI',
+                                      style: TextStyle(
+                                        color: _currentIndex == 3 ? AppColors.textPrimary : AppColors.textSecondary,
+                                        fontSize: 11,
+                                        fontWeight: _currentIndex == 3 ? FontWeight.w600 : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                  stops: const [0.0, 0.5, 1.0],
                 ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Voice Record Button (centered, with waveform)
-                  const VoiceRecordButton(),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Navigation icons row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // Chat / Home Icon
-                      _buildNavItem(
-                        icon: Icons.chat_bubble_rounded,
-                        label: 'Chats',
-                        isSelected: _currentIndex == 0,
-                        onTap: () => _onTabTapped(0),
-                      ),
-
-                      // Spacer for center button
-                      const SizedBox(width: 72),
-
-                      // Contacts Icon
-                      _buildNavItem(
-                        icon: Icons.people_alt_rounded,
-                        label: 'Contacts',
-                        isSelected: _currentIndex == 1,
-                        onTap: () => _onTabTapped(1),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
             ),
-          ),
         ],
       ),
     );

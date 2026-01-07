@@ -48,7 +48,64 @@ class _VoiceRecordButtonState extends ConsumerState<VoiceRecordButton>
     _pulseController.repeat(reverse: true);
     
     // Start recording
-    await ref.read(voiceRecordingProvider.notifier).startRecording();
+    final success = await ref.read(voiceRecordingProvider.notifier).startRecording();
+    
+    // If recording failed, check if permission was denied
+    if (!success && mounted) {
+      final voiceState = ref.read(voiceRecordingProvider);
+      
+      if (voiceState.isPermissionPermanentlyDenied) {
+        // Stop animation since recording won't start
+        _pulseController.stop();
+        _pulseController.reset();
+        setState(() => _isPressed = false);
+        
+        // Show dialog to open settings
+        _showPermissionDeniedDialog();
+      } else if (!voiceState.hasPermission) {
+        // Permission was denied but not permanently
+        _pulseController.stop();
+        _pulseController.reset();
+        setState(() => _isPressed = false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required to record voice messages'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+  
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Microphone Access Required',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: const Text(
+          'Microphone permission was denied. Please enable it in Settings to record voice messages.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ref.read(voiceRecordingProvider.notifier).openSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onPressEnd() async {
@@ -118,7 +175,7 @@ class _VoiceRecordButtonState extends ConsumerState<VoiceRecordButton>
         // Waveform display (above the button)
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: isRecording ? 50 : 0,
+          height: isRecording ? 70 : 0, // Increased height to prevent overflow
           child: isRecording
               ? Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),

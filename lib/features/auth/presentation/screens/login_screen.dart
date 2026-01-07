@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:country_code_picker/country_code_picker.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -19,6 +20,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String _countryCode = '+91';
 
   @override
   void dispose() {
@@ -29,9 +31,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _onContinue() async {
     if (_formKey.currentState!.validate()) {
       final phoneNumber = _phoneController.text.trim();
+      final fullNumber = _countryCode + phoneNumber;
       
       // Send OTP via Supabase + Twilio
-      final success = await ref.read(otpStateProvider.notifier).sendOtp(phoneNumber);
+      final success = await ref.read(otpStateProvider.notifier).sendOtp(fullNumber);
       
       if (success && mounted) {
         // Show success message
@@ -44,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
         
         // Navigate to OTP screen
-        context.push('/otp', extra: {'phone': phoneNumber});
+        context.push('/otp', extra: {'phone': fullNumber});
       }
     }
   }
@@ -98,20 +101,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 8, // reduced padding for picker
                     vertical: 4,
                   ),
                   child: Row(
                     children: [
-                      Text(
-                        '🇮🇳 +91',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
+                      CountryCodePicker(
+                        onChanged: (country) {
+                          setState(() {
+                            _countryCode = country.dialCode ?? '+91';
+                          });
+                        },
+                        initialSelection: 'IN',
+                        favorite: const ['+91', 'US'],
+                        showCountryOnly: false,
+                        showOnlyCountryWhenClosed: false,
+                        alignLeft: false,
+                        padding: EdgeInsets.zero,
+                        flagWidth: 24,
+                        textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w600,
                             ),
+                        // Dialog Theme
+                        dialogBackgroundColor: AppColors.surface,
+                        barrierColor: Colors.black.withOpacity(0.5),
+                        dialogTextStyle: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                        ),
+                        closeIcon: const Icon(Icons.close, color: AppColors.textPrimary),
+                        searchStyle: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                        ),
+                        searchDecoration: InputDecoration(
+                          hintText: 'Search country',
+                          hintStyle: const TextStyle(color: AppColors.textSecondary),
+                          prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: AppColors.inputBackground,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
                       ),
-                      const Gap(12),
                       Container(width: 1, height: 24, color: AppColors.divider),
                       const Gap(12),
                       Expanded(
@@ -135,7 +171,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your phone number';
                             }
-                            if (!AppConfig.isValidPhoneNumber(value)) {
+                            // Local validation (AppConfig handles full number validation internally now)
+                            if (value.length < 7) { 
                               return AppConfig.errorMessages['invalid_phone'];
                             }
                             return null;

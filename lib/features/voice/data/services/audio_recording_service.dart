@@ -6,6 +6,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/config/app_config.dart';
 
+/// Permission result for microphone
+enum MicrophonePermissionResult {
+  granted,
+  denied,
+  permanentlyDenied,
+}
+
 /// Service for audio recording with amplitude (waveform) data
 class AudioRecordingService {
   final AudioRecorder _recorder = AudioRecorder();
@@ -32,18 +39,35 @@ class AudioRecordingService {
     return DateTime.now().difference(_recordingStartTime!);
   }
 
-  /// Request microphone permission
-  Future<bool> requestPermission() async {
+  /// Request microphone permission and return detailed result
+  Future<MicrophonePermissionResult> requestPermission() async {
     final status = await Permission.microphone.request();
     if (AppConfig.debugMode) {
       print('🎤 Microphone permission: $status');
     }
-    return status.isGranted;
+    
+    if (status.isGranted) {
+      return MicrophonePermissionResult.granted;
+    } else if (status.isPermanentlyDenied) {
+      return MicrophonePermissionResult.permanentlyDenied;
+    } else {
+      return MicrophonePermissionResult.denied;
+    }
   }
 
   /// Check if microphone permission is granted
   Future<bool> hasPermission() async {
     return await Permission.microphone.isGranted;
+  }
+  
+  /// Check if permission is permanently denied
+  Future<bool> isPermissionPermanentlyDenied() async {
+    return await Permission.microphone.isPermanentlyDenied;
+  }
+  
+  /// Open app settings
+  Future<bool> openSettings() async {
+    return await openAppSettings();
   }
 
   /// Start recording audio
@@ -51,10 +75,10 @@ class AudioRecordingService {
     try {
       // Check permission
       if (!await hasPermission()) {
-        final granted = await requestPermission();
-        if (!granted) {
+        final result = await requestPermission();
+        if (result != MicrophonePermissionResult.granted) {
           if (AppConfig.debugMode) {
-            print('❌ Microphone permission denied');
+            print('❌ Microphone permission denied: $result');
           }
           return false;
         }

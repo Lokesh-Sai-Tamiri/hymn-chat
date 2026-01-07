@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -19,52 +20,52 @@ class OtpScreen extends ConsumerStatefulWidget {
 }
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
-  // Simple string to store OTP - no controller
+  TextEditingController? _otpController;
   String _otpCode = '';
   bool _isProcessing = false;
   bool _hasNavigated = false;
-  
-  // Use nullable FocusNode to avoid disposal issues
-  FocusNode? _focusNode;
+  bool _isDisposed = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
-    // Auto-focus on screen load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _focusNode != null) {
-        _focusNode!.requestFocus();
+    _otpController = TextEditingController();
+    _otpController!.addListener(_onControllerChange);
+  }
+
+  void _onControllerChange() {
+    if (_hasNavigated || _isDisposed) return;
+    final controller = _otpController;
+    if (controller == null) return;
+    
+    final newText = controller.text;
+    if (newText != _otpCode && newText.length <= AppConfig.otpLength) {
+      if (mounted) {
+        setState(() {
+          _otpCode = newText;
+        });
       }
-    });
+    }
   }
 
   @override
   void dispose() {
-    // Set to null before dispose to prevent access during disposal
-    final node = _focusNode;
-    _focusNode = null;
-    // Dispose in next microtask to avoid timing issues
-    Future.microtask(() {
-      try {
-        node?.dispose();
-      } catch (_) {
-        // Ignore disposal errors
-      }
-    });
-    super.dispose();
-  }
-
-  void _onOtpChanged(String value) {
-    if (_hasNavigated) return;
+    _isDisposed = true;
+    final controller = _otpController;
+    _otpController = null;
     
-    // Only allow digits and limit to OTP length
-    final filtered = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (filtered.length <= AppConfig.otpLength) {
-      setState(() {
-        _otpCode = filtered;
+    // Dispose in next microtask to avoid timing issues
+    if (controller != null) {
+      Future.microtask(() {
+        try {
+          controller.removeListener(_onControllerChange);
+          controller.dispose();
+        } catch (_) {
+          // Ignore disposal errors
+        }
       });
     }
+    super.dispose();
   }
 
   Future<void> _verifyAndNavigate() async {
@@ -119,12 +120,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         print('🚀 Navigating to: $destination');
       }
 
-      // Navigate using WidgetsBinding to ensure it happens after this frame
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.go(destination);
-        }
-      });
+      // Navigate using a small delay to ensure UI is stable
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) {
+        context.go(destination);
+      }
     } else {
       if (mounted) {
         setState(() => _isProcessing = false);
@@ -145,7 +145,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   void _onResend() async {
     final success = await ref.read(otpStateProvider.notifier).resendOtp(widget.phoneNumber);
-    if (success && mounted) {
+    if (success && mounted && !_isDisposed) {
+      // Clear the OTP input
+      _otpController?.clear();
+      setState(() {
+        _otpCode = '';
+      });
       _showMessage(AppConfig.successMessages['otp_resent']!, Colors.green);
     }
   }
@@ -173,11 +178,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       ),
       body: SafeArea(
         child: GestureDetector(
-          onTap: () {
-            if (_focusNode != null && mounted) {
-              _focusNode!.requestFocus();
-            }
-          },
+          onTap: () => FocusScope.of(context).unfocus(),
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -218,14 +219,64 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                 const Gap(40),
 
-                // OTP Input with visible boxes and hidden TextField
-                _buildOtpInput(),
+                // OTP Input using PinCodeTextField
+                if (_otpController != null)
+                PinCodeTextField(
+                  appContext: context,
+                  length: AppConfig.otpLength,
+                  controller: _otpController!,
+                  autoFocus: true,
+                  enabled: !isVerifying && !_hasNavigated,
+                  keyboardType: TextInputType.number,
+                  animationType: AnimationType.fade,
+                  animationDuration: const Duration(milliseconds: 150),
+                  enableActiveFill: true,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  textStyle: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                  pinTheme: PinTheme(
+                    shape: PinCodeFieldShape.box,
+                    borderRadius: BorderRadius.circular(12),
+                    fieldHeight: 56,
+                    fieldWidth: 48,
+                    activeFillColor: AppColors.inputBackground,
+                    inactiveFillColor: AppColors.inputBackground,
+                    selectedFillColor: AppColors.inputBackground,
+                    activeColor: AppColors.primary,
+                    inactiveColor: AppColors.divider,
+                    selectedColor: AppColors.primary,
+                    activeBorderWidth: 2,
+                    inactiveBorderWidth: 1.5,
+                    selectedBorderWidth: 2,
+                  ),
+                  cursorColor: AppColors.primary,
+                  onChanged: (value) {
+                    // Already handled by controller listener
+                  },
+                  onCompleted: (value) {
+                    // Auto-verify when all digits entered
+                    if (!_isProcessing && !_hasNavigated) {
+                      _verifyAndNavigate();
+                    }
+                  },
+                  beforeTextPaste: (text) {
+                    // Allow pasting only digits
+                    return text != null && RegExp(r'^\d+$').hasMatch(text);
+                  },
+                ).animate().fadeIn(delay: 300.ms).scale(),
 
                 const Gap(24),
 
                 PrimaryButton(
                   text: isVerifying ? 'Verifying...' : 'Verify',
-                  onPressed: isVerifying || _hasNavigated ? null : _verifyAndNavigate,
+                  onPressed: isVerifying || _hasNavigated || _otpCode.length != AppConfig.otpLength 
+                      ? null 
+                      : _verifyAndNavigate,
                 ),
 
                 const Spacer(),
@@ -272,90 +323,5 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         ),
       ),
     );
-  }
-
-  Widget _buildOtpInput() {
-    return Stack(
-      children: [
-        // Visible OTP boxes
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(AppConfig.otpLength, (index) {
-            final hasValue = index < _otpCode.length;
-            final isCurrentIndex = index == _otpCode.length;
-            
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 48,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.inputBackground,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isCurrentIndex
-                      ? AppColors.primary
-                      : (hasValue 
-                          ? AppColors.primary.withOpacity(0.5) 
-                          : AppColors.divider),
-                  width: isCurrentIndex ? 2 : 1.5,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  hasValue ? _otpCode[index] : '',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-        
-        // Hidden TextField - completely transparent but captures input
-        if (_focusNode != null)
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0,
-              child: EditableText(
-                focusNode: _focusNode!,
-                controller: _InternalTextController(
-                  text: _otpCode,
-                  onChanged: _onOtpChanged,
-                ),
-                cursorColor: Colors.transparent,
-                backgroundCursorColor: Colors.transparent,
-                style: const TextStyle(color: Colors.transparent),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(AppConfig.otpLength),
-                ],
-              ),
-            ),
-          ),
-      ],
-    ).animate().fadeIn(delay: 300.ms).scale();
-  }
-}
-
-/// Custom controller that doesn't need disposal management
-class _InternalTextController extends TextEditingController {
-  final void Function(String) onChanged;
-  
-  _InternalTextController({
-    required String text,
-    required this.onChanged,
-  }) : super(text: text);
-
-  @override
-  set value(TextEditingValue newValue) {
-    final oldText = text;
-    super.value = newValue;
-    if (text != oldText) {
-      onChanged(text);
-    }
   }
 }

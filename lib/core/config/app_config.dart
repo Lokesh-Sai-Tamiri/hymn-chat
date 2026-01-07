@@ -46,10 +46,10 @@ class AppConfig {
   static const int maxOtpAttempts = 3;
 
   /// Phone number minimum length (without country code)
-  static const int phoneNumberMinLength = 10;
+  static const int phoneNumberMinLength = 7;
 
   /// Phone number maximum length (without country code)
-  static const int phoneNumberMaxLength = 10;
+  static const int phoneNumberMaxLength = 15;
 
   // ============================================================================
   // TWILIO VERIFY CONFIGURATION
@@ -159,10 +159,18 @@ class AppConfig {
 
   /// Get full phone number with country code
   static String getFullPhoneNumber(String phoneNumber) {
+    // If it already starts with +, assume it has a country code
+    if (phoneNumber.trim().startsWith('+')) {
+      return phoneNumber.trim().replaceAll(RegExp(r'[^\d+]'), '');
+    }
+  
     // Remove any spaces, dashes, or special characters
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
 
-    // Add country code if not present
+    // Add default country code if not present (simple check)
+    // NOTE: This basic check fails if country code is same as start of number, 
+    // but better to rely on UI passing full E.164 if possible.
+    // For now, if we use formatted inputs, we expect clean number or + format.
     if (!cleanNumber.startsWith(defaultCountryCode.replaceAll('+', ''))) {
       return '$defaultCountryCode$cleanNumber';
     }
@@ -179,14 +187,9 @@ class AppConfig {
 
   /// Format phone number for display
   static String formatPhoneNumber(String phoneNumber) {
-    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-
-    if (cleanNumber.length == 10) {
-      // Format: XXX XXX XXXX
-      return '${cleanNumber.substring(0, 3)} ${cleanNumber.substring(3, 6)} ${cleanNumber.substring(6)}';
-    }
-
-    return phoneNumber;
+    // Basic formatting logic
+    if (phoneNumber.isEmpty) return '';
+    return phoneNumber; 
   }
 
   /// Check if config is valid
