@@ -21,16 +21,26 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+  int _previousIndex = 0;
+  PageController? _pageController;
   bool _isCheckingProfile = true;
   bool _hasCheckedProfile = false;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+    
     // Check profile status after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkProfileAndRedirect();
     });
+  }
+  
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
   }
 
   Future<void> _checkProfileAndRedirect() async {
@@ -82,9 +92,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     }
   }
 
-  int _previousIndex = 0;
-
   void _onTabTapped(int index) {
+    _pageController?.jumpToPage(index);
+  }
+
+  void _onPageChanged(int index) {
     if (_currentIndex != index) {
       setState(() {
         _previousIndex = _currentIndex;
@@ -95,6 +107,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure controller is initialized (handle hot reload case)
+    _pageController ??= PageController(initialPage: _currentIndex);
+
     // Define screens here to ensure hot reload works correctly
     final List<Widget> screens = [
       ChatListScreen(),
@@ -134,7 +149,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       body: Stack(
         children: [
           // Main Content
-          IndexedStack(index: _currentIndex, children: screens),
+          PageView(
+            controller: _pageController,
+            onPageChanged: _onPageChanged,
+            physics: const BouncingScrollPhysics(), // Better feel on iOS/Android
+            children: screens,
+          ),
 
           // Custom Bottom Bar (Hidden when on AI Tab)
           if (_currentIndex != 3)
