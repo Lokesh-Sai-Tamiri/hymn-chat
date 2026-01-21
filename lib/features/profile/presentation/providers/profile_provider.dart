@@ -1,6 +1,7 @@
 /// ============================================================================
 /// PROFILE PROVIDERS
 /// ============================================================================
+library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/profile_model.dart';
@@ -25,8 +26,8 @@ final currentProfileProvider = FutureProvider<ProfileModel?>((ref) async {
 /// Profile Notifier Provider
 final profileNotifierProvider =
     AsyncNotifierProvider<ProfileNotifier, ProfileModel?>(
-  () => ProfileNotifier(),
-);
+      () => ProfileNotifier(),
+    );
 
 /// Profile Notifier
 class ProfileNotifier extends AsyncNotifier<ProfileModel?> {
@@ -56,7 +57,7 @@ class ProfileNotifier extends AsyncNotifier<ProfileModel?> {
   /// Save profile
   Future<bool> saveProfile(ProfileModel profile) async {
     state = const AsyncValue.loading();
-    
+
     state = await AsyncValue.guard(() async {
       final savedProfile = await _repository.upsertProfile(profile);
 
@@ -83,4 +84,3 @@ class ProfileNotifier extends AsyncNotifier<ProfileModel?> {
     await future;
   }
 }
-

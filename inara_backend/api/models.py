@@ -12,9 +12,25 @@ class ChatResponse(BaseModel):
 
 class SessionCreateRequest(BaseModel):
     user_id: Optional[str] = None
+    title: Optional[str] = None
 
 class SessionResponse(BaseModel):
     session_id: str
     user_id: Optional[str] = None
+    title: Optional[str] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     history: Optional[List[dict]] = None
+
+class SessionListItem(BaseModel):
+    """Lightweight session info for listing (without full history)."""
+    session_id: str
+    user_id: Optional[str] = None
+    title: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    message_count: int = 0
+
+class DeleteResponse(BaseModel):
+    success: bool
+    message: str

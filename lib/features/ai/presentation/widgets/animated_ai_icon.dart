@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/colors.dart';
 
 class AnimatedAIIcon extends StatefulWidget {
   final bool isSelected;
-  
-  const AnimatedAIIcon({
-    super.key,
-    required this.isSelected,
-  });
+
+  const AnimatedAIIcon({super.key, required this.isSelected});
 
   @override
   State<AnimatedAIIcon> createState() => _AnimatedAIIconState();
 }
 
-class _AnimatedAIIconState extends State<AnimatedAIIcon> with SingleTickerProviderStateMixin {
+class _AnimatedAIIconState extends State<AnimatedAIIcon>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -55,7 +52,9 @@ class _AnimatedAIIconState extends State<AnimatedAIIcon> with SingleTickerProvid
                       Colors.orange,
                       Colors.blue,
                     ],
-                    transform: GradientRotation(_controller.value * 2 * 3.14159),
+                    transform: GradientRotation(
+                      _controller.value * 2 * 3.14159,
+                    ),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -70,7 +69,6 @@ class _AnimatedAIIconState extends State<AnimatedAIIcon> with SingleTickerProvid
             // Icon with simple white or gradient
             // If not selected, we can show a colorful static icon
             // If selected, maybe just white on top of the glow?
-            
             ShaderMask(
               shaderCallback: (bounds) {
                 return SweepGradient(

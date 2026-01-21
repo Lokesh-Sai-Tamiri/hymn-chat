@@ -1,6 +1,7 @@
 /// ============================================================================
 /// PROFILE REPOSITORY
 /// ============================================================================
+library;
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -84,7 +85,8 @@ class ProfileRepository {
       if (profile == null) return false;
 
       // Check if all required fields are filled
-      final isComplete = profile.firstName != null &&
+      final isComplete =
+          profile.firstName != null &&
           profile.firstName!.isNotEmpty &&
           profile.lastName != null &&
           profile.lastName!.isNotEmpty &&
@@ -149,4 +151,3 @@ class ProfileRepository {
   //   }
   // }
 }
-

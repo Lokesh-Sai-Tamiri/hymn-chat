@@ -1,6 +1,7 @@
 /// ============================================================================
 /// AUTH PROVIDERS - Riverpod State Management
 /// ============================================================================
+library;
 
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,14 +32,14 @@ final otpStateProvider = NotifierProvider<OtpNotifier, OtpStateModel>(() {
 class AuthNotifier extends Notifier<AuthStateModel> {
   late final AuthRepository _repository;
   StreamSubscription? _authSubscription;
-  
+
   @override
   AuthStateModel build() {
     _repository = ref.watch(authRepositoryProvider);
     _init();
     return AuthStateModel.initial();
   }
-  
+
   void _init() {
     // Check initial auth state
     final user = _repository.getCurrentUser();
@@ -47,17 +48,17 @@ class AuthNotifier extends Notifier<AuthStateModel> {
     } else {
       state = AuthStateModel.unauthenticated();
     }
-    
+
     // Listen to auth state changes
     _authSubscription = _repository.onAuthStateChange().listen((authState) {
       final event = authState.event;
-      
+
       if (authState.session?.user != null) {
         state = AuthStateModel.authenticated(authState.session!.user);
       } else {
         state = AuthStateModel.unauthenticated();
       }
-      
+
       // Handle specific events
       if (event == AuthChangeEvent.tokenRefreshed) {
         if (AppConfig.debugMode) {
@@ -70,12 +71,12 @@ class AuthNotifier extends Notifier<AuthStateModel> {
       }
     });
   }
-  
+
   /// Check if user has completed profile setup
   Future<bool> hasCompletedProfile() async {
     return await _repository.hasCompletedProfile();
   }
-  
+
   /// Sign out
   Future<void> signOut() async {
     try {
@@ -99,13 +100,13 @@ class OtpNotifier extends Notifier<OtpStateModel> {
   late final AuthRepository _repository;
   Timer? _resendTimer;
   int _attemptsCount = 0;
-  
+
   @override
   OtpStateModel build() {
     _repository = ref.watch(authRepositoryProvider);
     return OtpStateModel.initial();
   }
-  
+
   /// Send OTP to phone number
   Future<bool> sendOtp(String phoneNumber) async {
     try {
@@ -118,7 +119,7 @@ class OtpNotifier extends Notifier<OtpStateModel> {
         );
         return false;
       }
-      
+
       // Validate phone number
       if (!AppConfig.isValidPhoneNumber(phoneNumber)) {
         state = OtpStateModel.error(
@@ -127,23 +128,23 @@ class OtpNotifier extends Notifier<OtpStateModel> {
         );
         return false;
       }
-      
+
       state = OtpStateModel.sending(phoneNumber);
-      
+
       // Send OTP via repository
       await _repository.sendOtp(phoneNumber);
-      
+
       _attemptsCount++;
-      
+
       // Set sent state with cooldown
       state = OtpStateModel.sent(
         phoneNumber,
         cooldownSeconds: AppConfig.otpResendCooldownSeconds,
       );
-      
+
       // Start cooldown timer
       _startResendTimer(phoneNumber);
-      
+
       return true;
     } catch (e) {
       state = OtpStateModel.error(
@@ -154,7 +155,7 @@ class OtpNotifier extends Notifier<OtpStateModel> {
       return false;
     }
   }
-  
+
   /// Verify OTP code
   Future<bool> verifyOtp({
     required String phoneNumber,
@@ -169,15 +170,15 @@ class OtpNotifier extends Notifier<OtpStateModel> {
         );
         return false;
       }
-      
+
       state = OtpStateModel.verifying(phoneNumber);
-      
+
       // Verify OTP via repository
       final response = await _repository.verifyOtp(
         phoneNumber: phoneNumber,
         otpCode: otpCode,
       );
-      
+
       if (response.user != null) {
         state = OtpStateModel.verified(phoneNumber);
         _resetAttempts();
@@ -197,44 +198,39 @@ class OtpNotifier extends Notifier<OtpStateModel> {
       return false;
     }
   }
-  
+
   /// Resend OTP
   Future<bool> resendOtp(String phoneNumber) async {
     // Cancel existing timer
     _resendTimer?.cancel();
-    
+
     // Send new OTP
     return await sendOtp(phoneNumber);
   }
-  
+
   /// Start resend cooldown timer
   void _startResendTimer(String phoneNumber) {
     _resendTimer?.cancel();
-    
+
     int remainingSeconds = AppConfig.otpResendCooldownSeconds;
-    
+
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       remainingSeconds--;
-      
+
       if (remainingSeconds <= 0) {
         timer.cancel();
-        state = state.copyWith(
-          canResend: true,
-          remainingSeconds: 0,
-        );
+        state = state.copyWith(canResend: true, remainingSeconds: 0);
       } else {
-        state = state.copyWith(
-          remainingSeconds: remainingSeconds,
-        );
+        state = state.copyWith(remainingSeconds: remainingSeconds);
       }
     });
   }
-  
+
   /// Reset attempts count
   void _resetAttempts() {
     _attemptsCount = 0;
   }
-  
+
   /// Reset state
   void reset() {
     _resendTimer?.cancel();
@@ -243,4 +239,3 @@ class OtpNotifier extends Notifier<OtpStateModel> {
 }
 
 // Dispose is handled automatically by Riverpod 3.x
-

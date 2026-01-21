@@ -1,0 +1,490 @@
+/// ============================================================================
+/// MESSAGING MODELS - HIPAA Compliant
+/// ============================================================================
+library;
+
+/// Message type enum
+enum MessageType {
+  text,
+  audio,
+  image,
+  document,
+  system,
+}
+
+/// Message status enum
+enum MessageStatus {
+  sending,
+  sent,
+  delivered,
+  read,
+  failed,
+}
+
+/// Report reason enum
+enum ReportReason {
+  spam,
+  harassment,
+  inappropriateContent,
+  impersonation,
+  privacyViolation,
+  other,
+}
+
+/// Messaging preferences model
+class MessagingPreferencesModel {
+  final String userId;
+  final String whoCanMessage; // 'everyone', 'connections', 'organization', 'none'
+  final bool readReceiptsEnabled;
+  final bool showTypingIndicator;
+  final bool showOnlineStatus;
+  final bool allowAudioSave; // Snapchat-style: others can save your audio
+  final int? defaultDisappearingHours;
+  final bool messageNotifications;
+  final bool soundEnabled;
+  final bool vibrationEnabled;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const MessagingPreferencesModel({
+    required this.userId,
+    this.whoCanMessage = 'connections',
+    this.readReceiptsEnabled = true,
+    this.showTypingIndicator = true,
+    this.showOnlineStatus = true,
+    this.allowAudioSave = false,
+    this.defaultDisappearingHours = 24,
+    this.messageNotifications = true,
+    this.soundEnabled = true,
+    this.vibrationEnabled = true,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory MessagingPreferencesModel.fromJson(Map<String, dynamic> json) {
+    return MessagingPreferencesModel(
+      userId: json['user_id'] as String,
+      whoCanMessage: json['who_can_message'] as String? ?? 'connections',
+      readReceiptsEnabled: json['read_receipts_enabled'] as bool? ?? true,
+      showTypingIndicator: json['show_typing_indicator'] as bool? ?? true,
+      showOnlineStatus: json['show_online_status'] as bool? ?? true,
+      allowAudioSave: json['allow_audio_save'] as bool? ?? false,
+      defaultDisappearingHours: json['default_disappearing_hours'] as int?,
+      messageNotifications: json['message_notifications'] as bool? ?? true,
+      soundEnabled: json['sound_enabled'] as bool? ?? true,
+      vibrationEnabled: json['vibration_enabled'] as bool? ?? true,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'user_id': userId,
+      'who_can_message': whoCanMessage,
+      'read_receipts_enabled': readReceiptsEnabled,
+      'show_typing_indicator': showTypingIndicator,
+      'show_online_status': showOnlineStatus,
+      'allow_audio_save': allowAudioSave,
+      'default_disappearing_hours': defaultDisappearingHours,
+      'message_notifications': messageNotifications,
+      'sound_enabled': soundEnabled,
+      'vibration_enabled': vibrationEnabled,
+    };
+  }
+
+  MessagingPreferencesModel copyWith({
+    String? whoCanMessage,
+    bool? readReceiptsEnabled,
+    bool? showTypingIndicator,
+    bool? showOnlineStatus,
+    bool? allowAudioSave,
+    int? defaultDisappearingHours,
+    bool? messageNotifications,
+    bool? soundEnabled,
+    bool? vibrationEnabled,
+  }) {
+    return MessagingPreferencesModel(
+      userId: userId,
+      whoCanMessage: whoCanMessage ?? this.whoCanMessage,
+      readReceiptsEnabled: readReceiptsEnabled ?? this.readReceiptsEnabled,
+      showTypingIndicator: showTypingIndicator ?? this.showTypingIndicator,
+      showOnlineStatus: showOnlineStatus ?? this.showOnlineStatus,
+      allowAudioSave: allowAudioSave ?? this.allowAudioSave,
+      defaultDisappearingHours: defaultDisappearingHours ?? this.defaultDisappearingHours,
+      messageNotifications: messageNotifications ?? this.messageNotifications,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
+      vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+}
+
+/// Conversation model (from my_conversations view)
+class ConversationModel {
+  final String conversationId;
+  final String? lastMessageText;
+  final MessageType lastMessageType;
+  final DateTime? lastMessageAt;
+  final String? lastMessageSenderId;
+  final String? blockedBy;
+  final int? disappearingHours;
+  final DateTime createdAt;
+  
+  // Other user info
+  final String otherUserId;
+  final String? firstName;
+  final String? lastName;
+  final String? displayName;
+  final String? avatarUrl;
+  final String? specialization;
+  
+  // My settings
+  final int unreadCount;
+  final bool isMuted;
+  final bool isArchived;
+  final bool isPinned;
+  
+  // Other user's audio save preference
+  final bool otherAllowsAudioSave;
+
+  const ConversationModel({
+    required this.conversationId,
+    this.lastMessageText,
+    this.lastMessageType = MessageType.text,
+    this.lastMessageAt,
+    this.lastMessageSenderId,
+    this.blockedBy,
+    this.disappearingHours,
+    required this.createdAt,
+    required this.otherUserId,
+    this.firstName,
+    this.lastName,
+    this.displayName,
+    this.avatarUrl,
+    this.specialization,
+    this.unreadCount = 0,
+    this.isMuted = false,
+    this.isArchived = false,
+    this.isPinned = false,
+    this.otherAllowsAudioSave = false,
+  });
+
+  factory ConversationModel.fromJson(Map<String, dynamic> json) {
+    return ConversationModel(
+      conversationId: json['conversation_id'] as String,
+      lastMessageText: json['last_message_text'] as String?,
+      lastMessageType: _parseMessageType(json['last_message_type'] as String?),
+      lastMessageAt: json['last_message_at'] != null
+          ? DateTime.parse(json['last_message_at'] as String)
+          : null,
+      lastMessageSenderId: json['last_message_sender_id'] as String?,
+      blockedBy: json['blocked_by'] as String?,
+      disappearingHours: json['disappearing_hours'] as int?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      otherUserId: json['other_user_id'] as String,
+      firstName: json['first_name'] as String?,
+      lastName: json['last_name'] as String?,
+      displayName: json['display_name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      specialization: json['specialization'] as String?,
+      unreadCount: json['unread_count'] as int? ?? 0,
+      isMuted: json['is_muted'] as bool? ?? false,
+      isArchived: json['is_archived'] as bool? ?? false,
+      isPinned: json['is_pinned'] as bool? ?? false,
+      otherAllowsAudioSave: json['other_allows_audio_save'] as bool? ?? false,
+    );
+  }
+
+  String get otherUserName {
+    if (firstName != null && lastName != null) {
+      return '$firstName $lastName';
+    } else if (displayName != null) {
+      return displayName!;
+    } else if (firstName != null) {
+      return firstName!;
+    }
+    return 'Unknown';
+  }
+
+  String get initials {
+    if (firstName != null && lastName != null) {
+      return '${firstName![0]}${lastName![0]}'.toUpperCase();
+    } else if (displayName != null && displayName!.isNotEmpty) {
+      final parts = displayName!.split(' ');
+      if (parts.length >= 2) {
+        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      }
+      return displayName![0].toUpperCase();
+    }
+    return '?';
+  }
+
+  bool get isBlocked => blockedBy != null;
+
+  static MessageType _parseMessageType(String? type) {
+    switch (type) {
+      case 'audio':
+        return MessageType.audio;
+      case 'image':
+        return MessageType.image;
+      case 'document':
+        return MessageType.document;
+      case 'system':
+        return MessageType.system;
+      default:
+        return MessageType.text;
+    }
+  }
+}
+
+/// Message model
+class MessageModel {
+  final String id;
+  final String conversationId;
+  final String senderId;
+  final MessageType messageType;
+  final String? content;
+  final String? fileUrl;
+  final String? fileName;
+  final int? fileSize;
+  final String? fileMimeType;
+  final int? audioDurationSeconds;
+  final Map<String, dynamic>? audioWaveform;
+  final String? savedBy;
+  final DateTime? savedAt;
+  final MessageStatus status;
+  final DateTime? deliveredAt;
+  final DateTime? readAt;
+  final DateTime? disappearsAt;
+  final DateTime? viewedAt;
+  final String? replyToId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const MessageModel({
+    required this.id,
+    required this.conversationId,
+    required this.senderId,
+    this.messageType = MessageType.text,
+    this.content,
+    this.fileUrl,
+    this.fileName,
+    this.fileSize,
+    this.fileMimeType,
+    this.audioDurationSeconds,
+    this.audioWaveform,
+    this.savedBy,
+    this.savedAt,
+    this.status = MessageStatus.sent,
+    this.deliveredAt,
+    this.readAt,
+    this.disappearsAt,
+    this.viewedAt,
+    this.replyToId,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory MessageModel.fromJson(Map<String, dynamic> json) {
+    return MessageModel(
+      id: json['id'] as String,
+      conversationId: json['conversation_id'] as String,
+      senderId: json['sender_id'] as String,
+      messageType: ConversationModel._parseMessageType(json['message_type'] as String?),
+      content: json['content'] as String?,
+      fileUrl: json['file_url'] as String?,
+      fileName: json['file_name'] as String?,
+      fileSize: json['file_size'] as int?,
+      fileMimeType: json['file_mime_type'] as String?,
+      audioDurationSeconds: json['audio_duration_seconds'] as int?,
+      audioWaveform: json['audio_waveform'] as Map<String, dynamic>?,
+      savedBy: json['saved_by'] as String?,
+      savedAt: json['saved_at'] != null
+          ? DateTime.parse(json['saved_at'] as String)
+          : null,
+      status: _parseStatus(json['status'] as String?),
+      deliveredAt: json['delivered_at'] != null
+          ? DateTime.parse(json['delivered_at'] as String)
+          : null,
+      readAt: json['read_at'] != null
+          ? DateTime.parse(json['read_at'] as String)
+          : null,
+      disappearsAt: json['disappears_at'] != null
+          ? DateTime.parse(json['disappears_at'] as String)
+          : null,
+      viewedAt: json['viewed_at'] != null
+          ? DateTime.parse(json['viewed_at'] as String)
+          : null,
+      replyToId: json['reply_to_id'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
+  static MessageStatus _parseStatus(String? status) {
+    switch (status) {
+      case 'sending':
+        return MessageStatus.sending;
+      case 'delivered':
+        return MessageStatus.delivered;
+      case 'read':
+        return MessageStatus.read;
+      case 'failed':
+        return MessageStatus.failed;
+      default:
+        return MessageStatus.sent;
+    }
+  }
+
+  bool get isAudio => messageType == MessageType.audio;
+  bool get isImage => messageType == MessageType.image;
+  bool get isDocument => messageType == MessageType.document;
+  bool get isText => messageType == MessageType.text;
+  bool get isSaved => savedBy != null;
+  bool get willDisappear => disappearsAt != null;
+
+  String get audioDurationFormatted {
+    if (audioDurationSeconds == null) return '0:00';
+    final minutes = audioDurationSeconds! ~/ 60;
+    final seconds = audioDurationSeconds! % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  MessageModel copyWith({
+    MessageStatus? status,
+    DateTime? readAt,
+    String? savedBy,
+    DateTime? savedAt,
+  }) {
+    return MessageModel(
+      id: id,
+      conversationId: conversationId,
+      senderId: senderId,
+      messageType: messageType,
+      content: content,
+      fileUrl: fileUrl,
+      fileName: fileName,
+      fileSize: fileSize,
+      fileMimeType: fileMimeType,
+      audioDurationSeconds: audioDurationSeconds,
+      audioWaveform: audioWaveform,
+      savedBy: savedBy ?? this.savedBy,
+      savedAt: savedAt ?? this.savedAt,
+      status: status ?? this.status,
+      deliveredAt: deliveredAt,
+      readAt: readAt ?? this.readAt,
+      disappearsAt: disappearsAt,
+      viewedAt: viewedAt,
+      replyToId: replyToId,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+}
+
+/// Blocked user model
+class BlockedUserModel {
+  final String blockId;
+  final String blockedId;
+  final String? reason;
+  final DateTime blockedAt;
+  final String? firstName;
+  final String? lastName;
+  final String? displayName;
+  final String? avatarUrl;
+
+  const BlockedUserModel({
+    required this.blockId,
+    required this.blockedId,
+    this.reason,
+    required this.blockedAt,
+    this.firstName,
+    this.lastName,
+    this.displayName,
+    this.avatarUrl,
+  });
+
+  factory BlockedUserModel.fromJson(Map<String, dynamic> json) {
+    return BlockedUserModel(
+      blockId: json['block_id'] as String,
+      blockedId: json['blocked_id'] as String,
+      reason: json['reason'] as String?,
+      blockedAt: DateTime.parse(json['blocked_at'] as String),
+      firstName: json['first_name'] as String?,
+      lastName: json['last_name'] as String?,
+      displayName: json['display_name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+    );
+  }
+
+  String get name {
+    if (firstName != null && lastName != null) {
+      return '$firstName $lastName';
+    }
+    return displayName ?? 'Unknown';
+  }
+
+  String get initials {
+    if (firstName != null && lastName != null) {
+      return '${firstName![0]}${lastName![0]}'.toUpperCase();
+    } else if (displayName != null && displayName!.isNotEmpty) {
+      return displayName![0].toUpperCase();
+    }
+    return '?';
+  }
+}
+
+/// Chat settings for a specific conversation
+class ChatSettingsModel {
+  final String conversationId;
+  final String otherUserId;
+  final String otherUserName;
+  final String? otherUserAvatar;
+  final String? otherUserSpecialization;
+  final bool isMuted;
+  final bool isArchived;
+  final bool isPinned;
+  final int? disappearingHours;
+  final bool isBlocked;
+  final bool otherAllowsAudioSave;
+
+  const ChatSettingsModel({
+    required this.conversationId,
+    required this.otherUserId,
+    required this.otherUserName,
+    this.otherUserAvatar,
+    this.otherUserSpecialization,
+    this.isMuted = false,
+    this.isArchived = false,
+    this.isPinned = false,
+    this.disappearingHours,
+    this.isBlocked = false,
+    this.otherAllowsAudioSave = false,
+  });
+
+  factory ChatSettingsModel.fromConversation(ConversationModel conv) {
+    return ChatSettingsModel(
+      conversationId: conv.conversationId,
+      otherUserId: conv.otherUserId,
+      otherUserName: conv.otherUserName,
+      otherUserAvatar: conv.avatarUrl,
+      otherUserSpecialization: conv.specialization,
+      isMuted: conv.isMuted,
+      isArchived: conv.isArchived,
+      isPinned: conv.isPinned,
+      disappearingHours: conv.disappearingHours,
+      isBlocked: conv.isBlocked,
+      otherAllowsAudioSave: conv.otherAllowsAudioSave,
+    );
+  }
+
+  String get disappearingText {
+    if (disappearingHours == null) return 'Never';
+    if (disappearingHours == 1) return '1 Hour';
+    if (disappearingHours == 24) return '24 Hours';
+    if (disappearingHours == 168) return '1 Week';
+    return '$disappearingHours Hours';
+  }
+}

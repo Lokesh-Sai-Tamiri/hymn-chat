@@ -1,46 +1,35 @@
 /// ============================================================================
 /// AUTH STATE MODEL
 /// ============================================================================
+library;
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum AuthStatus {
-  initial,
-  loading,
-  authenticated,
-  unauthenticated,
-  error,
-}
+enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
 
 class AuthStateModel {
   final AuthStatus status;
   final User? user;
   final String? errorMessage;
   final bool isLoading;
-  
+
   const AuthStateModel({
     required this.status,
     this.user,
     this.errorMessage,
     this.isLoading = false,
   });
-  
+
   // Initial state
   factory AuthStateModel.initial() {
-    return const AuthStateModel(
-      status: AuthStatus.initial,
-      isLoading: false,
-    );
+    return const AuthStateModel(status: AuthStatus.initial, isLoading: false);
   }
-  
+
   // Loading state
   factory AuthStateModel.loading() {
-    return const AuthStateModel(
-      status: AuthStatus.loading,
-      isLoading: true,
-    );
+    return const AuthStateModel(status: AuthStatus.loading, isLoading: true);
   }
-  
+
   // Authenticated state
   factory AuthStateModel.authenticated(User user) {
     return AuthStateModel(
@@ -49,7 +38,7 @@ class AuthStateModel {
       isLoading: false,
     );
   }
-  
+
   // Unauthenticated state
   factory AuthStateModel.unauthenticated() {
     return const AuthStateModel(
@@ -57,7 +46,7 @@ class AuthStateModel {
       isLoading: false,
     );
   }
-  
+
   // Error state
   factory AuthStateModel.error(String message) {
     return AuthStateModel(
@@ -66,7 +55,7 @@ class AuthStateModel {
       isLoading: false,
     );
   }
-  
+
   // Copy with method
   AuthStateModel copyWith({
     AuthStatus? status,
@@ -81,22 +70,16 @@ class AuthStateModel {
       isLoading: isLoading ?? this.isLoading,
     );
   }
-  
-  bool get isAuthenticated => status == AuthStatus.authenticated && user != null;
+
+  bool get isAuthenticated =>
+      status == AuthStatus.authenticated && user != null;
 }
 
 /// ============================================================================
 /// OTP STATE MODEL
 /// ============================================================================
 
-enum OtpStatus {
-  initial,
-  sending,
-  sent,
-  verifying,
-  verified,
-  error,
-}
+enum OtpStatus { initial, sending, sent, verifying, verified, error }
 
 class OtpStateModel {
   final OtpStatus status;
@@ -105,7 +88,7 @@ class OtpStateModel {
   final bool canResend;
   final int remainingSeconds;
   final int attemptsLeft;
-  
+
   const OtpStateModel({
     required this.status,
     this.phoneNumber,
@@ -114,15 +97,12 @@ class OtpStateModel {
     this.remainingSeconds = 0,
     this.attemptsLeft = 3,
   });
-  
+
   // Initial state
   factory OtpStateModel.initial() {
-    return const OtpStateModel(
-      status: OtpStatus.initial,
-      canResend: false,
-    );
+    return const OtpStateModel(status: OtpStatus.initial, canResend: false);
   }
-  
+
   // Sending state
   factory OtpStateModel.sending(String phoneNumber) {
     return OtpStateModel(
@@ -131,7 +111,7 @@ class OtpStateModel {
       canResend: false,
     );
   }
-  
+
   // Sent state
   factory OtpStateModel.sent(String phoneNumber, {int cooldownSeconds = 30}) {
     return OtpStateModel(
@@ -141,7 +121,7 @@ class OtpStateModel {
       remainingSeconds: cooldownSeconds,
     );
   }
-  
+
   // Verifying state
   factory OtpStateModel.verifying(String phoneNumber) {
     return OtpStateModel(
@@ -150,7 +130,7 @@ class OtpStateModel {
       canResend: false,
     );
   }
-  
+
   // Verified state
   factory OtpStateModel.verified(String phoneNumber) {
     return OtpStateModel(
@@ -159,7 +139,7 @@ class OtpStateModel {
       canResend: false,
     );
   }
-  
+
   // Error state
   factory OtpStateModel.error(
     String message, {
@@ -174,7 +154,7 @@ class OtpStateModel {
       attemptsLeft: attemptsLeft ?? 3,
     );
   }
-  
+
   // Copy with method
   OtpStateModel copyWith({
     OtpStatus? status,
@@ -194,4 +174,3 @@ class OtpStateModel {
     );
   }
 }
-

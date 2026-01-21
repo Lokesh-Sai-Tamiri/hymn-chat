@@ -51,6 +51,9 @@ dependencies:
   shared_preferences: ^2.3.3
   intl: ^0.19.0
   
+  # HTTP Client
+  http: ^1.2.0
+  
   # Audio Recording & Playback
   record: ^6.0.0
   audioplayers: ^6.1.0
@@ -58,6 +61,9 @@ dependencies:
   permission_handler: ^11.3.1
   uuid: ^4.5.1
   country_code_picker: ^3.4.1
+  
+  # Speech to Text
+  speech_to_text: ^7.0.0
 
 dev_dependencies:
   flutter_test:

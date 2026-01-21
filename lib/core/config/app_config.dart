@@ -8,6 +8,7 @@
 /// IMPORTANT: Never commit sensitive keys to version control!
 /// Use environment variables or .env files for production.
 /// ============================================================================
+library;
 
 class AppConfig {
   // ============================================================================
@@ -114,6 +115,23 @@ class AppConfig {
   static const bool retryOnTokenExpiry = true;
 
   // ============================================================================
+  // INARA AI BACKEND CONFIGURATION
+  // ============================================================================
+
+  /// Inara AI Backend base URL
+  /// For local development: 'http://localhost:8000'
+  /// For production: Update to your deployed backend URL
+  static const String inaraApiBaseUrl = 'http://localhost:8000';
+
+  /// Inara API endpoints
+  static const String inaraChatEndpoint = '/api/chat';
+  static const String inaraSessionsEndpoint = '/api/sessions';
+  static const String inaraUserSessionsEndpoint = '/api/users';
+
+  /// Request timeout in seconds
+  static const int apiTimeoutSeconds = 60;
+
+  // ============================================================================
   // PROFILE CONFIGURATION
   // ============================================================================
 
@@ -163,12 +181,12 @@ class AppConfig {
     if (phoneNumber.trim().startsWith('+')) {
       return phoneNumber.trim().replaceAll(RegExp(r'[^\d+]'), '');
     }
-  
+
     // Remove any spaces, dashes, or special characters
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
 
     // Add default country code if not present (simple check)
-    // NOTE: This basic check fails if country code is same as start of number, 
+    // NOTE: This basic check fails if country code is same as start of number,
     // but better to rely on UI passing full E.164 if possible.
     // For now, if we use formatted inputs, we expect clean number or + format.
     if (!cleanNumber.startsWith(defaultCountryCode.replaceAll('+', ''))) {
@@ -189,7 +207,7 @@ class AppConfig {
   static String formatPhoneNumber(String phoneNumber) {
     // Basic formatting logic
     if (phoneNumber.isEmpty) return '';
-    return phoneNumber; 
+    return phoneNumber;
   }
 
   /// Check if config is valid

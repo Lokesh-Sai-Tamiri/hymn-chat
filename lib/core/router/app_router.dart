@@ -6,6 +6,8 @@ import '../../features/profile/presentation/screens/create_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/chat/presentation/screens/chat_settings_screen.dart';
+import '../../features/contacts/presentation/screens/contact_profile_screen.dart';
+import '../../features/contacts/data/models/connection_model.dart';
 import '../../features/home/presentation/screens/main_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../config/app_config.dart';
@@ -86,6 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ChatScreen(
             chatId: id,
             userName: extra?['userName'] ?? 'Chat',
+            otherUserId: extra?['otherUserId'],
           );
         },
       ),
@@ -97,6 +100,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ChatSettingsScreen(
             chatId: id,
             userName: extra?['userName'] ?? 'User',
+            otherUserId: extra?['otherUserId'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/contact/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final extra = state.extra as Map<String, dynamic>?;
+          return ContactProfileScreen(
+            userId: id,
+            connectionId: extra?['connectionId'],
+            connectionStatus: extra?['connectionStatus'] as ConnectionStatus?,
           );
         },
       ),
