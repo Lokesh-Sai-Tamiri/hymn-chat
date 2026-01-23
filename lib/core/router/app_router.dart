@@ -109,10 +109,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           final extra = state.extra as Map<String, dynamic>?;
+          
+          ConnectionStatus? connectionStatus;
+          if (extra != null && extra['connectionStatus'] != null) {
+            final statusStr = extra['connectionStatus'];
+            if (statusStr is String) { // Handle string from JSON/serialization
+               try {
+                 connectionStatus = ConnectionStatus.values.firstWhere(
+                   (e) => e.name == statusStr,
+                   orElse: () => ConnectionStatus.pending,
+                 );
+               } catch (_) {}
+            } else if (statusStr is ConnectionStatus) { // Handle direct object (if supported)
+               connectionStatus = statusStr;
+            }
+          }
+
           return ContactProfileScreen(
             userId: id,
             connectionId: extra?['connectionId'],
-            connectionStatus: extra?['connectionStatus'] as ConnectionStatus?,
+            connectionStatus: connectionStatus,
           );
         },
       ),

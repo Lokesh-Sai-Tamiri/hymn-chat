@@ -828,7 +828,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen> with SingleTick
             '/contact/${contact.contactUserId}',
             extra: {
               'connectionId': contact.connectionId,
-              'connectionStatus': ConnectionStatus.accepted,
+              'connectionStatus': ConnectionStatus.accepted.name,
             },
           );
         },

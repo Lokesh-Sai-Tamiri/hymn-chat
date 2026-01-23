@@ -26,7 +26,45 @@ class ProfileRepository {
 
       if (response == null) {
         if (AppConfig.debugMode) {
-          print('⚠️ No profile found for user');
+          print('⚠️ No profile found in profiles table, trying views...');
+        }
+        
+        // Fallback 1: Try from user_network (for connected users)
+        final networkResponse = await _supabase
+            .from('user_network')
+            .select()
+            .eq('contact_user_id', userId)
+            .maybeSingle();
+            
+        if (networkResponse != null) {
+          // Map view columns to profile model keys
+          final viewData = Map<String, dynamic>.from(networkResponse);
+          viewData['id'] = viewData['contact_user_id']; // Remap ID
+          
+          final profile = ProfileModel.fromJson(viewData);
+          if (AppConfig.debugMode) print('✅ Profile loaded from user_network view');
+          return profile;
+        }
+
+        // Fallback 2: Try from suggested_connections (for non-connected users)
+        final suggestedResponse = await _supabase
+            .from('suggested_connections')
+            .select()
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (suggestedResponse != null) {
+          // Map view columns to profile model keys
+          final viewData = Map<String, dynamic>.from(suggestedResponse);
+          viewData['id'] = viewData['user_id']; // Remap ID
+          
+          final profile = ProfileModel.fromJson(viewData);
+          if (AppConfig.debugMode) print('✅ Profile loaded from suggested_connections view');
+          return profile;
+        }
+
+        if (AppConfig.debugMode) {
+          print('❌ Profile truly not found anywhere');
         }
         return null;
       }
